@@ -57,13 +57,27 @@ def buildDoc(doc,plist):
         ele = p[0]#this is child element
         det = p[1]#this is list of runs with tuple (text, param dictionary)
         pa = doc.add_paragraph()
+        #print(ele.name)
         for d in det:#each d will be a run tuple
-            if d[1] == None:#if no param dictionary, just add element text
-                pa.add_run(d[0])
-            elif d[1]['block_quote'] or d[1]['ul'] or d[1]['ol']:#test for paragraph level styles
+            if d[1] != None:
+                if d[1]['block_quote'] or d[1]['ul'] or d[1]['ol']:#test for paragraph level styles
+                    if d[1]['block_quote']:
+                        pa.style = doc.styles['List 3']
+                    elif d[1]['ul']:
+                        pa.style = doc.styles['List Bullet 2']
+                    elif d[1]['ol']:
+                        pa.style = doc.styles['List Number']
+                    pass
+            if d[0] == '\n':#if no param dictionary, just add element text
+                #pa.add_run(d[0])
                 pass
-            elif d[1]['a_element']:#check for image or get href for hyperlink
-                pass
+            elif d[1]['a_element']:
+                if ele.name == 'a':
+                    url = ele['href']
+                else:
+                    ur = ele.find('a')
+                    url = ur['href']
+                add_hyperlink(pa, d[0], url, d[1]['bold'], d[1]['italic'], d[1]['underline'])
             elif d[1]['image']:
                 tst = ele.find('img')    
                 w = float(tst['width'])/96
@@ -139,8 +153,15 @@ def getBody(bodyele):
     for child in bodyele:
         #child will be <p>, <ul>, <ol>, <blockquote>, etc... creating line of article
         runs = []
-        if child.name == None:#name of None suggests inner text
-            runs.append((child,None))
+        if child.name == None:#name of None suggests inner text or \n, <br>
+            #runs.append((child,None))
+            print(child == '\n')
+            pass
+        elif child.name == 'ul' or child.name == 'ol' or child.name == 'blockquote':
+            params[testName(child.name)] = True
+            paragraphs.extend(getBody(child))
+            params[testName(child.name)] = False
+            pass
         else:
             #runs = []
             allp = dict(params)
@@ -157,12 +178,12 @@ def getBody(bodyele):
         paragraphs.append((child,runs))
     return paragraphs
 
-def testChildren(element, paramdict):#receive bold element with bold param = true
+def testChildren(element, paramdict):
     lists = []
-    print(paramdict)
+    #print(paramdict)
     for ch in element:
-        print(ch.name)
-        if ch.name == None:
+        #print(ch.name)
+        if ch.name == None and ch != '\n':
             lists.append((ch,paramdict))
         elif ch.name == 'picture':
             d = dict(params)
