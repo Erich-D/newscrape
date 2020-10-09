@@ -10,12 +10,18 @@ import requests
 tstd = Document()
 tstp = tstd.add_paragraph()
 tstr = tstp.add_run()
-bold = False
-ital = False
-atag = False
-head = False
+params = {
+    'bold':False,
+    'italic':False,
+    'underline':False,
+    'block_quote':False,
+    'a_element':False,
+    'ul':False,
+    'ol':False,
+    'image':False
+}
 def main():
-    f = open("ultest.html","r")
+    f = open("bodytest.html","r")
     soup = BeautifulSoup(f, 'lxml')
     print("encoding is {}".format(soup.original_encoding))
     for l in soup.descendants:
@@ -41,180 +47,53 @@ def buildZHdoc(**kwargs):
     else:
         document.add_heading(title.get_text(), 0)
     main = body.find_all('div',class_="clearfix")[0].children
-    for child in main:
-        testChild(child,document)
+    docbody = getBody(main)
+    buildDoc(document,docbody)
     return document
-def testChild(child,doc):
-    print(child.name)
-    if child.name == 'p':
-        if type(doc) == type(tstd):
-            paragraph = doc.add_paragraph()
-            addP(child,paragraph)
-        elif type(doc) == type(tstp):
-            addP(child,doc)
-        elif type(doc) == type(tstr):
-            pass
-    elif child.name == 'blockquote':
-        if type(doc) == type(tstd):
-            addBQ(child,doc)
-        elif type(doc) == type(tstp):
-            pass
-        elif type(doc) == type(tstr):
-            pass
-    elif child.name == 'u':
-        if type(doc) == type(tstd):
-            pass
-        elif type(doc) == type(tstp):
-            pass
-        elif type(doc) == type(tstr):
-            doc.underline = True
-    elif child.name == 'em':
-        if type(doc) == type(tstd):
-            pass
-        elif type(doc) == type(tstp):
-            pass
-        elif type(doc) == type(tstr):
-            doc.italic = True
-    elif child.name == 'img':
-        if type(doc) == type(tstd):
-            pass
-        elif type(doc) == type(tstp):
-            pass
-        elif type(doc) == type(tstr):
-            pass
-    elif child.name == 'a':
-        if type(doc) == type(tstd):
-            paragraph = doc.add_paragraph()
-            addA(child,paragraph)
-        elif type(doc) == type(tstp):
-            addA(child,doc)
-        elif type(doc) == type(tstr):
-            pass
-    elif child.name == 'picture':
-        tmp = child.find_all('img')
-        w = float(tmp[0]['width'])/96
-        imgdata = requests.get(tmp[0]['src']).content
-        imgfile = io.BytesIO(imgdata)
-        if type(doc) == type(tstd):
-            doc.add_picture(imgfile, width=Inches(w))
-            print("got doc")
-        elif type(doc) == type(tstp):
-            run = doc.add_run()
-            run.add_picture(imgfile, width=Inches(w))
-            print("got par")
-        elif type(doc) == type(tstr):
-            doc.add_picture(imgfile, width=Inches(w))
-            print("got run")
-        else:
-            print("got nothing")
-    elif child.name == 'ul':
-        if type(doc) == type(tstd):
-            addUL(child,doc)
-        elif type(doc) == type(tstp):
-            pass
-        elif type(doc) == type(tstr):
-            pass
-    elif child.name == 'ol':
-        if type(doc) == type(tstd):
-            pass
-        elif type(doc) == type(tstp):
-            pass
-        elif type(doc) == type(tstr):
-            pass
-    elif child.name == 'iframe':
-        if type(doc) == type(tstd):
-            pass
-        elif type(doc) == type(tstp):
-            pass
-        elif type(doc) == type(tstr):
-            pass
-def addUL(c,doc):
-    for li in c.children:
-        if li.name == None:
-            pass
-            #p.add_run(li)
-        else:
-            style = doc.styles['List Bullet']
-            p = doc.add_paragraph("",style)
-            ulr = p.add_run(li.get_text())
-            if has_children(li):
-                if li.contents[0].name != None:
-                    testChild(li.contents[0],ulr)
-def addBQ(c,doc):
-    style = doc.styles['List 3']
-    paragraph = doc.add_paragraph(style)
-    for ch in c.children:
-        testChild(ch, paragraph)
-def addP(c,p):
-    for child in c.children:
-        if child.name == None:
-            p.add_run(child)
-        else:
-            testChild(child,p)
-def addA(c,p):
-    bold = False
-    ital = False
-    url = c['href']
-    for child in c.children:
-        if child.name == None:
-            pass
-            add_hyperlink(p, c.get_text(), url, bold, ital, False)
-        else:
-            testChild(child,p)
-def addPa(c,doc,style=None):
-    global bold
-    global ital
-    global atag
-    tmp = c.find_all('img')
-    if len(tmp)>0:
-        #print('picture here')
-        w = float(tmp[0]['width'])/96
-        imgdata = requests.get(tmp[0]['src']).content
-        imgfile = io.BytesIO(imgdata)
-        doc.add_picture(imgfile, width=Inches(w))
-    else:
-        if style:
-            para = doc.add_paragraph(style=style)
-        else:
-            para = doc.add_paragraph()
-        inc = 1
-        for ch in c.children:
-            print("ch name is {}".format(ch.name))
-            if ch.name == None:
-                para.add_run(ch)
-            elif ch.name == 'br':
-                para.add_run('\n')
-            else:
-                tst = ch
-                testName(str(tst.name))
-                while has_children(tst):
-                    print("tst name is {}".format(tst.name))
-                    if tst.name == 'a':
-                        url = tst['href']
-                    testName(tst.name)
-                    try:
-                        tst = tst.contents[0]
-                    except:
-                        tst = None
-                if atag:
-                    #print("test is {}".format(tst))
-                    add_hyperlink(para, tst, url, bold, ital, False)
-                else:
-                    run = para.add_run(tst)
-                    run.bold = bold
-                    run.italic = ital
-                bold = ital = atag = False
-        print("next paragragh")
+
+def buildDoc(doc,plist):
+    pass
+    for p in plist:#each p has body child element with list of runs
+        ele = p[0]#this is child element
+        det = p[1]#this is list of runs with tuple (text, param dictionary)
+        pa = doc.add_paragraph()
+        for d in det:#each d will be a run tuple
+            if d[1] == None:#if no param dictionary, just add element text
+                pa.add_run(d[0])
+            elif d[1]['block_quote'] or d[1]['ul'] or d[1]['ol']:#test for paragraph level styles
+                pass
+            elif d[1]['a_element']:#check for image or get href for hyperlink
+                pass
+            elif d[1]['image']:
+                tst = ele.find('img')    
+                w = float(tst['width'])/96
+                imgdata = requests.get(tst['src']).content
+                imgfile = io.BytesIO(imgdata)
+                doc.add_picture(imgfile, width=Inches(w))
+            #todo  // add code for video and iframe handling
+            else:# if no special cases add text with run styles
+                r = pa.add_run(d[0])
+                r.bold = d[1]['bold']
+                r.italic = d[1]['italic']
+                r.font.underline = d[1]['underline']
+
 def testName(name):
-    global bold
-    global ital
-    global atag
     if name == 'strong':
-        bold = True
+        return 'bold'
     elif name == 'em':
-        ital = True
+        return 'italic'
     elif name == 'a':
-        atag = True
+        return 'a_element'
+    elif name == 'u':
+        return 'underline'
+    elif name == 'blockquote':
+        return 'block_quote'
+    elif name == 'ul':
+        return 'ul'
+    elif name == 'ol':
+        return 'ol'
+    else:
+        return None
     #print("bold is {} and ital is {} and atag is {}".format(bold, ital, atag))
 def has_children(element):
     try:
@@ -255,8 +134,47 @@ def add_hyperlink(paragraph, text, url, bflag, iflag, head):
        r.font.underline = False 
     return hyperlink
 
+def getBody(bodyele):
+    paragraphs = []
+    for child in bodyele:
+        #child will be <p>, <ul>, <ol>, <blockquote>, etc... creating line of article
+        runs = []
+        if child.name == None:#name of None suggests inner text
+            runs.append((child,None))
+        else:
+            #runs = []
+            allp = dict(params)
+            allp[testName(child.name)] = True
+            #print(str(child))
+            #c will be <a>, <li>, <bold>, etc... creating runs of paragraph
+            for c in child:
+                if c.name == None:
+                    runs.append((c,allp))
+                else:
+                    p = dict(allp)#copy params with any paragraph styles
+                    p[testName(c.name)] = True #test for run style in case c isn't text
+                    runs.extend(testChildren(c,p))
+        paragraphs.append((child,runs))
+    return paragraphs
 
-
+def testChildren(element, paramdict):#receive bold element with bold param = true
+    lists = []
+    print(paramdict)
+    for ch in element:
+        print(ch.name)
+        if ch.name == None:
+            lists.append((ch,paramdict))
+        elif ch.name == 'picture':
+            d = dict(params)
+            d['image'] = True
+            lists.append((ch,d))
+        else:
+            d = dict(paramdict)
+            d[testName(ch.name)] = True
+            if has_children(ch):
+                lists.extend(testChildren(ch,d))
+        pass
+    return lists
 
 if __name__ == "__main__":
     main()
